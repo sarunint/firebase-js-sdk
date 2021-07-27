@@ -68,8 +68,8 @@ jobs:
     - name: Yarn install
       run: |
         yarn add firebase@next
-        yarn test:v8
+        yarn
     - name: Run tests
       env:
         APP_CHECK_DEBUG_TOKEN: ${{ secrets.APP_CHECK_DEBUG_TOKEN }}
-      run: xvfb-run yarn test
+      run: xvfb-run yarn test:v8
