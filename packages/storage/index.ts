@@ -20,7 +20,6 @@ import { _FirebaseNamespace } from '@firebase/app-types/private';
 import { StringFormat } from './src/implementation/string';
 import { TaskEvent, TaskState } from './src/implementation/taskenums';
 
-import { ConnectionPool } from './src/implementation/connectionPool';
 import { ReferenceCompat } from './compat/reference';
 import { StorageServiceCompat } from './compat/service';
 import { FirebaseStorageImpl } from './src/service';
@@ -59,7 +58,6 @@ function factory(
       app,
       authProvider,
       appCheckProvider,
-      new ConnectionPool(),
       url,
       firebase.SDK_VERSION
     )

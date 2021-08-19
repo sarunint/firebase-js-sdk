@@ -16,8 +16,6 @@
  */
 import { expect } from 'chai';
 import { TaskEvent } from '../../src/implementation/taskenums';
-import { Headers } from '../../src/implementation/connection';
-import { ConnectionPool } from '../../src/implementation/connectionPool';
 import { StorageServiceCompat } from '../../compat/service';
 import * as testShared from './testshared';
 import { DEFAULT_HOST } from '../../src/implementation/constants';
@@ -27,12 +25,12 @@ import { FirebaseApp } from '@firebase/app-types';
 import { Provider } from '@firebase/component';
 import { FirebaseAuthInternalName } from '@firebase/auth-interop-types';
 import { AppCheckInternalComponentName } from '@firebase/app-check-interop-types';
-import { TestingConnection } from './connection';
+import { newTestConnection, TestingConnection } from './connection';
+import { injectTestConnection } from '../../src/platform/connection';
 
 const fakeAppGs = testShared.makeFakeApp('gs://mybucket');
 const fakeAppGsEndingSlash = testShared.makeFakeApp('gs://mybucket/');
 const fakeAppInvalidGs = testShared.makeFakeApp('gs://mybucket/hello');
-const connectionPool = new ConnectionPool();
 
 function makeGsUrl(child: string = ''): string {
   return 'gs://' + testShared.bucket + '/' + child;
@@ -42,12 +40,11 @@ function makeService(
   app: FirebaseApp,
   authProvider: Provider<FirebaseAuthInternalName>,
   appCheckProvider: Provider<AppCheckInternalComponentName>,
-  pool: ConnectionPool,
   url?: string
 ): StorageServiceCompat {
   const storageServiceCompat: StorageServiceCompat = new StorageServiceCompat(
     app,
-    new FirebaseStorageImpl(app, authProvider, appCheckProvider, pool, url)
+    new FirebaseStorageImpl(app, authProvider, appCheckProvider, url)
   );
   return storageServiceCompat;
 }
@@ -57,8 +54,7 @@ describe('Firebase Storage > Service', () => {
     const service = makeService(
       testShared.fakeApp,
       testShared.fakeAuthProvider,
-      testShared.fakeAppCheckTokenProvider,
-      connectionPool
+      testShared.fakeAppCheckTokenProvider
     );
     it('Root refs point to the right place', () => {
       const ref = service.ref();
@@ -93,7 +89,6 @@ describe('Firebase Storage > Service', () => {
         testShared.fakeApp,
         testShared.fakeAuthProvider,
         testShared.fakeAppCheckTokenProvider,
-        connectionPool,
         'gs://foo-bar.appspot.com'
       );
       const ref = service.ref();
@@ -104,7 +99,6 @@ describe('Firebase Storage > Service', () => {
         testShared.fakeApp,
         testShared.fakeAuthProvider,
         testShared.fakeAppCheckTokenProvider,
-        connectionPool,
         `http://${DEFAULT_HOST}/v1/b/foo-bar.appspot.com/o`
       );
       const ref = service.ref();
@@ -115,7 +109,6 @@ describe('Firebase Storage > Service', () => {
         testShared.fakeApp,
         testShared.fakeAuthProvider,
         testShared.fakeAppCheckTokenProvider,
-        connectionPool,
         `https://${DEFAULT_HOST}/v1/b/foo-bar.appspot.com/o`
       );
       const ref = service.ref();
@@ -127,7 +120,6 @@ describe('Firebase Storage > Service', () => {
         testShared.fakeApp,
         testShared.fakeAuthProvider,
         testShared.fakeAppCheckTokenProvider,
-        connectionPool,
         'foo-bar.appspot.com'
       );
       const ref = service.ref();
@@ -138,7 +130,6 @@ describe('Firebase Storage > Service', () => {
         testShared.fakeApp,
         testShared.fakeAuthProvider,
         testShared.fakeAppCheckTokenProvider,
-        connectionPool,
         'foo-bar.appspot.com'
       );
       const ref = service.ref('path/to/child');
@@ -150,7 +141,6 @@ describe('Firebase Storage > Service', () => {
           testShared.fakeApp,
           testShared.fakeAuthProvider,
           testShared.fakeAppCheckTokenProvider,
-          connectionPool,
           'gs://bucket/object/'
         );
       }, 'storage/invalid-default-bucket');
@@ -162,8 +152,7 @@ describe('Firebase Storage > Service', () => {
       const service = makeService(
         fakeAppGs,
         testShared.fakeAuthProvider,
-        testShared.fakeAppCheckTokenProvider,
-        connectionPool
+        testShared.fakeAppCheckTokenProvider
       );
       expect(service.ref().toString()).to.equal('gs://mybucket/');
     });
@@ -171,8 +160,7 @@ describe('Firebase Storage > Service', () => {
       const service = makeService(
         fakeAppGsEndingSlash,
         testShared.fakeAuthProvider,
-        testShared.fakeAppCheckTokenProvider,
-        connectionPool
+        testShared.fakeAppCheckTokenProvider
       );
       expect(service.ref().toString()).to.equal('gs://mybucket/');
     });
@@ -181,32 +169,26 @@ describe('Firebase Storage > Service', () => {
         makeService(
           fakeAppInvalidGs,
           testShared.fakeAuthProvider,
-          testShared.fakeAppCheckTokenProvider,
-          connectionPool
+          testShared.fakeAppCheckTokenProvider
         );
       }, 'storage/invalid-default-bucket');
     });
   });
   describe('connectStorageEmulator(service, host, port)', () => {
     it('sets emulator host correctly', done => {
-      function newSend(
-        connection: TestingConnection,
-        url: string,
-        method: string,
-        body?: ArrayBufferView | Blob | string | null,
-        headers?: Headers
-      ): void {
+      function newSend(connection: TestingConnection, url: string): void {
         // Expect emulator host to be in url of storage operations requests,
         // in this case getDownloadURL.
         expect(url).to.match(/^http:\/\/test\.host\.org:1234.+/);
         connection.abort();
+        injectTestConnection(null);
         done();
       }
+      injectTestConnection(() => newTestConnection(newSend));
       const service = makeService(
         testShared.fakeApp,
         testShared.fakeAuthProvider,
-        testShared.fakeAppCheckTokenProvider,
-        testShared.makePool(newSend)
+        testShared.fakeAppCheckTokenProvider
       );
       service.useEmulator('test.host.org', 1234);
       expect((service._delegate as FirebaseStorageImpl).host).to.equal(
@@ -219,8 +201,7 @@ describe('Firebase Storage > Service', () => {
     const service = makeService(
       testShared.fakeApp,
       testShared.fakeAuthProvider,
-      testShared.fakeAppCheckTokenProvider,
-      connectionPool
+      testShared.fakeAppCheckTokenProvider
     );
     it('Works with gs:// URLs', () => {
       const ref = service.refFromURL('gs://mybucket/child/path/image.png');
@@ -278,8 +259,7 @@ GOOG4-RSA-SHA256`
     const service = makeService(
       testShared.fakeApp,
       testShared.fakeAuthProvider,
-      testShared.fakeAppCheckTokenProvider,
-      connectionPool
+      testShared.fakeAppCheckTokenProvider
     );
     describe('ref', () => {
       it('Throws on gs:// argument', () => {
@@ -328,8 +308,7 @@ GOOG4-RSA-SHA256`
     const service = makeService(
       testShared.fakeApp,
       testShared.fakeAuthProvider,
-      testShared.fakeAppCheckTokenProvider,
-      connectionPool
+      testShared.fakeAppCheckTokenProvider
     );
     it('In-flight requests are canceled when the service is deleted', async () => {
       const ref = service.refFromURL('gs://mybucket/image.jpg');

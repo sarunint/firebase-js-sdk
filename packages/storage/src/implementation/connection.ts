@@ -15,18 +15,18 @@
  * limitations under the License.
  */
 
-/**
- * Network headers
- */
-export interface Headers {
-  [name: string]: string;
-}
+/** Network headers */
+export type Headers = Record<string, string>;
 
 /**
  * A lightweight wrapper around XMLHttpRequest with a
  * goog.net.XhrIo-like interface.
+ *
+ * ResponseType is generally either `string` or `ArrayBuffer`. You can create
+ * a new connection by invoking `newTextConnection()` or
+ * `newBytesConnection()`.
  */
-export interface Connection {
+export interface Connection<ResponseType> {
   send(
     url: string,
     method: string,
@@ -37,6 +37,8 @@ export interface Connection {
   getErrorCode(): ErrorCode;
 
   getStatus(): number;
+
+  getResponse(): ResponseType;
 
   getResponseText(): string;
 

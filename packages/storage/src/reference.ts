@@ -29,7 +29,8 @@ import {
   updateMetadata as requestsUpdateMetadata,
   getDownloadUrl as requestsGetDownloadUrl,
   deleteObject as requestsDeleteObject,
-  multipartUpload
+  multipartUpload,
+  getBytes
 } from './implementation/requests';
 import { ListOptions } from '../exp/public-types';
 import { StringFormat, dataFromString } from './implementation/string';
@@ -40,6 +41,7 @@ import { UploadTask } from './task';
 import { invalidRootOperation, noDownloadURL } from './implementation/error';
 import { validateNumber } from './implementation/type';
 import { UploadResult } from './tasksnapshot';
+import { newBytesConnection, newTextConnection } from './platform/connection';
 
 /**
  * Provides methods to interact with a bucket in the Firebase Storage service.
@@ -144,6 +146,18 @@ export class Reference {
 }
 
 /**
+ * Download the bytes at the object's location.
+ * @returns A Promise containing the downloaded bytes.
+ */
+export function getBytesInternal(ref: Reference): Promise<ArrayBuffer> {
+  ref._throwIfRoot('getBytes');
+  const requestInfo = getBytes(ref.storage, ref._location);
+  return ref.storage
+    .makeRequestWithTokens(requestInfo, newBytesConnection)
+    .then(request => request.getPromise());
+}
+
+/**
  * Uploads data to this object's location.
  * The upload is not resumable.
  *
@@ -166,7 +180,7 @@ export function uploadBytes(
     metadata
   );
   return ref.storage
-    .makeRequestWithTokens(requestInfo)
+    .makeRequestWithTokens(requestInfo, newTextConnection)
     .then(request => request.getPromise())
     .then(finalMetadata => {
       return {
@@ -313,7 +327,9 @@ export async function list(
     op.pageToken,
     op.maxResults
   );
-  return (await ref.storage.makeRequestWithTokens(requestInfo)).getPromise();
+  return (
+    await ref.storage.makeRequestWithTokens(requestInfo, newTextConnection)
+  ).getPromise();
 }
 
 /**
@@ -330,7 +346,9 @@ export async function getMetadata(ref: Reference): Promise<Metadata> {
     ref._location,
     getMappings()
   );
-  return (await ref.storage.makeRequestWithTokens(requestInfo)).getPromise();
+  return (
+    await ref.storage.makeRequestWithTokens(requestInfo, newTextConnection)
+  ).getPromise();
 }
 
 /**
@@ -355,7 +373,9 @@ export async function updateMetadata(
     metadata,
     getMappings()
   );
-  return (await ref.storage.makeRequestWithTokens(requestInfo)).getPromise();
+  return (
+    await ref.storage.makeRequestWithTokens(requestInfo, newTextConnection)
+  ).getPromise();
 }
 
 /**
@@ -371,7 +391,9 @@ export async function getDownloadURL(ref: Reference): Promise<string> {
     ref._location,
     getMappings()
   );
-  return (await ref.storage.makeRequestWithTokens(requestInfo))
+  return (
+    await ref.storage.makeRequestWithTokens(requestInfo, newTextConnection)
+  )
     .getPromise()
     .then(url => {
       if (url === null) {
@@ -390,7 +412,9 @@ export async function getDownloadURL(ref: Reference): Promise<string> {
 export async function deleteObject(ref: Reference): Promise<void> {
   ref._throwIfRoot('deleteObject');
   const requestInfo = requestsDeleteObject(ref.storage, ref._location);
-  return (await ref.storage.makeRequestWithTokens(requestInfo)).getPromise();
+  return (
+    await ref.storage.makeRequestWithTokens(requestInfo, newTextConnection)
+  ).getPromise();
 }
 
 /**

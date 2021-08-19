@@ -22,13 +22,14 @@ import { Metadata } from '../../src/metadata';
 import { ReferenceCompat } from '../../compat/reference';
 import { StorageServiceCompat } from '../../compat/service';
 import * as testShared from './testshared';
-import { SendHook, TestingConnection } from './connection';
+import { newTestConnection, SendHook, TestingConnection } from './connection';
 import { DEFAULT_HOST } from '../../src/implementation/constants';
 import { FirebaseAuthInternalName } from '@firebase/auth-interop-types';
 import { Provider } from '@firebase/component';
 import { FirebaseStorageImpl } from '../../src/service';
 import { Reference } from '../../src/reference';
 import { AppCheckInternalComponentName } from '@firebase/app-check-interop-types';
+import { injectTestConnection } from '../../src/platform/connection';
 
 /* eslint-disable @typescript-eslint/no-floating-promises */
 function makeFakeService(
@@ -39,12 +40,7 @@ function makeFakeService(
 ): StorageServiceCompat {
   const storageServiceCompat: StorageServiceCompat = new StorageServiceCompat(
     app,
-    new FirebaseStorageImpl(
-      app,
-      authProvider,
-      appCheckProvider,
-      testShared.makePool(sendHook)
-    )
+    new FirebaseStorageImpl(app, authProvider, appCheckProvider)
   );
   return storageServiceCompat;
 }
@@ -53,8 +49,7 @@ function makeStorage(url: string): ReferenceCompat {
   const service = new FirebaseStorageImpl(
     {} as FirebaseApp,
     testShared.emptyAuthProvider,
-    testShared.fakeAppCheckTokenProvider,
-    testShared.makePool(null)
+    testShared.fakeAppCheckTokenProvider
   );
   const storageServiceCompat: StorageServiceCompat = new StorageServiceCompat(
     {} as FirebaseApp,
@@ -197,9 +192,11 @@ describe('Firebase Storage > Reference', () => {
     ): void {
       expect(headers).to.not.be.undefined;
       expect(headers!['Authorization']).to.be.undefined;
+      injectTestConnection(null);
       done();
     }
 
+    injectTestConnection(() => newTestConnection(newSend));
     const service = makeFakeService(
       testShared.fakeApp,
       testShared.emptyAuthProvider,
@@ -223,9 +220,11 @@ describe('Firebase Storage > Reference', () => {
       expect(headers!['Authorization']).to.equal(
         'Firebase ' + testShared.authToken
       );
+      injectTestConnection(null);
       done();
     }
 
+    injectTestConnection(() => newTestConnection(newSend));
     const service = makeFakeService(
       testShared.fakeApp,
       testShared.fakeAuthProvider,

@@ -19,8 +19,7 @@ import * as sinon from 'sinon';
 import { makeRequest } from '../../src/implementation/request';
 import { RequestInfo } from '../../src/implementation/requestinfo';
 import { Connection } from '../../src/implementation/connection';
-import { makePool } from './testshared';
-import { TestingConnection } from './connection';
+import { TestingConnection, newTestConnection } from './connection';
 
 const TEST_VERSION = '1.2.3';
 
@@ -45,7 +44,7 @@ describe('Firebase Storage > Request', () => {
     }
     const spiedSend = sinon.spy(newSend);
 
-    function handler(connection: Connection, text: string): string {
+    function handler(connection: Connection<string>, text: string): string {
       assert.equal(text, response);
       assert.equal(connection.getResponseHeader(responseHeader), responseValue);
       assert.equal(connection.getStatus(), status);
@@ -61,10 +60,10 @@ describe('Firebase Storage > Request', () => {
 
     return makeRequest(
       requestInfo,
+      () => newTestConnection(spiedSend),
       null,
       null,
       null,
-      makePool(spiedSend),
       TEST_VERSION
     )
       .getPromise()
@@ -93,7 +92,7 @@ describe('Firebase Storage > Request', () => {
     }
     const spiedSend = sinon.spy(newSend);
 
-    function handler(connection: Connection, text: string): string {
+    function handler(connection: Connection<string>, text: string): string {
       return text;
     }
 
@@ -108,7 +107,13 @@ describe('Firebase Storage > Request', () => {
     requestInfo.urlParams[p1] = v1;
     requestInfo.urlParams[p2] = v2;
     requestInfo.body = 'thisistherequestbody';
-    return makeRequest(requestInfo, null, null, null, makePool(spiedSend))
+    return makeRequest(
+      requestInfo,
+      () => newTestConnection(spiedSend),
+      null,
+      null,
+      null
+    )
       .getPromise()
       .then(
         () => {
@@ -151,7 +156,13 @@ describe('Firebase Storage > Request', () => {
       timeout
     );
 
-    return makeRequest(requestInfo, null, null, null, makePool(newSend))
+    return makeRequest(
+      requestInfo,
+      () => newTestConnection(newSend),
+      null,
+      null,
+      null
+    )
       .getPromise()
       .then(
         () => {
@@ -173,7 +184,13 @@ describe('Firebase Storage > Request', () => {
       handler,
       timeout
     );
-    const request = makeRequest(requestInfo, null, null, null, makePool(null));
+    const request = makeRequest(
+      requestInfo,
+      newTestConnection,
+      null,
+      null,
+      null
+    );
     const promise = request.getPromise().then(
       () => {
         assert.fail('Succeeded when handler gave error');
@@ -202,10 +219,10 @@ describe('Firebase Storage > Request', () => {
     );
     const request = makeRequest(
       requestInfo,
+      () => newTestConnection(spiedSend),
       /* appId= */ null,
       authToken,
       null,
-      makePool(spiedSend),
       TEST_VERSION
     );
     return request.getPromise().then(
@@ -243,10 +260,10 @@ describe('Firebase Storage > Request', () => {
     );
     const request = makeRequest(
       requestInfo,
+      () => newTestConnection(spiedSend),
       appId,
       null,
       null,
-      makePool(spiedSend),
       TEST_VERSION
     );
     return request.getPromise().then(
@@ -284,10 +301,10 @@ describe('Firebase Storage > Request', () => {
     );
     const request = makeRequest(
       requestInfo,
+      () => newTestConnection(spiedSend),
       null,
       null,
       appCheckToken,
-      makePool(spiedSend),
       TEST_VERSION
     );
     return request.getPromise().then(

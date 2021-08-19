@@ -41,7 +41,7 @@ import {
   toResourceString
 } from './metadata';
 import { fromResponseString } from './list';
-import { RequestInfo, UrlParams } from './requestinfo';
+import { RequestHandler, RequestInfo, UrlParams } from './requestinfo';
 import { isString } from './type';
 import { makeUrl } from './url';
 import { Connection } from './connection';
@@ -59,8 +59,8 @@ export function handlerCheck(cndn: boolean): void {
 export function metadataHandler(
   service: FirebaseStorageImpl,
   mappings: Mappings
-): (p1: Connection, p2: string) => Metadata {
-  function handler(xhr: Connection, text: string): Metadata {
+): (p1: Connection<string>, p2: string) => Metadata {
+  function handler(xhr: Connection<string>, text: string): Metadata {
     const metadata = fromResourceString(service, text, mappings);
     handlerCheck(metadata !== null);
     return metadata as Metadata;
@@ -71,8 +71,8 @@ export function metadataHandler(
 export function listHandler(
   service: FirebaseStorageImpl,
   bucket: string
-): (p1: Connection, p2: string) => ListResult {
-  function handler(xhr: Connection, text: string): ListResult {
+): (p1: Connection<string>, p2: string) => ListResult {
+  function handler(xhr: Connection<string>, text: string): ListResult {
     const listResult = fromResponseString(service, bucket, text);
     handlerCheck(listResult !== null);
     return listResult as ListResult;
@@ -83,8 +83,8 @@ export function listHandler(
 export function downloadUrlHandler(
   service: FirebaseStorageImpl,
   mappings: Mappings
-): (p1: Connection, p2: string) => string | null {
-  function handler(xhr: Connection, text: string): string | null {
+): (p1: Connection<string>, p2: string) => string | null {
+  function handler(xhr: Connection<string>, text: string): string | null {
     const metadata = fromResourceString(service, text, mappings);
     handlerCheck(metadata !== null);
     return downloadUrlFromResourceString(
@@ -98,9 +98,9 @@ export function downloadUrlHandler(
 
 export function sharedErrorHandler(
   location: Location
-): (p1: Connection, p2: FirebaseStorageError) => FirebaseStorageError {
+): (p1: Connection<unknown>, p2: FirebaseStorageError) => FirebaseStorageError {
   function errorHandler(
-    xhr: Connection,
+    xhr: Connection<unknown>,
     err: FirebaseStorageError
   ): FirebaseStorageError {
     let newErr;
@@ -133,11 +133,11 @@ export function sharedErrorHandler(
 
 export function objectErrorHandler(
   location: Location
-): (p1: Connection, p2: FirebaseStorageError) => FirebaseStorageError {
+): (p1: Connection<unknown>, p2: FirebaseStorageError) => FirebaseStorageError {
   const shared = sharedErrorHandler(location);
 
   function errorHandler(
-    xhr: Connection,
+    xhr: Connection<unknown>,
     err: FirebaseStorageError
   ): FirebaseStorageError {
     let newErr = shared(xhr, err);
@@ -154,7 +154,7 @@ export function getMetadata(
   service: FirebaseStorageImpl,
   location: Location,
   mappings: Mappings
-): RequestInfo<Metadata> {
+): RequestInfo<string, Metadata> {
   const urlPart = location.fullServerUrl();
   const url = makeUrl(urlPart, service.host);
   const method = 'GET';
@@ -175,7 +175,7 @@ export function list(
   delimiter?: string,
   pageToken?: string | null,
   maxResults?: number | null
-): RequestInfo<ListResult> {
+): RequestInfo<string, ListResult> {
   const urlParams: UrlParams = {};
   if (location.isRoot) {
     urlParams['prefix'] = '';
@@ -206,11 +206,28 @@ export function list(
   return requestInfo;
 }
 
+export function getBytes(
+  service: FirebaseStorageImpl,
+  location: Location
+): RequestInfo<ArrayBuffer, ArrayBuffer> {
+  const urlPart = location.fullServerUrl();
+  const url = makeUrl(urlPart, service.host) + '?alt=media';
+  const method = 'GET';
+  const timeout = service.maxOperationRetryTime;
+  const requestInfo = new RequestInfo(url, method, getBytesHandler(), timeout);
+  requestInfo.errorHandler = objectErrorHandler(location);
+  return requestInfo;
+}
+
+export function getBytesHandler(): RequestHandler<ArrayBuffer, ArrayBuffer> {
+  return (xhr: Connection<ArrayBuffer>, data: ArrayBuffer) => data;
+}
+
 export function getDownloadUrl(
   service: FirebaseStorageImpl,
   location: Location,
   mappings: Mappings
-): RequestInfo<string | null> {
+): RequestInfo<string, string | null> {
   const urlPart = location.fullServerUrl();
   const url = makeUrl(urlPart, service.host);
   const method = 'GET';
@@ -230,7 +247,7 @@ export function updateMetadata(
   location: Location,
   metadata: Partial<Metadata>,
   mappings: Mappings
-): RequestInfo<Metadata> {
+): RequestInfo<string, Metadata> {
   const urlPart = location.fullServerUrl();
   const url = makeUrl(urlPart, service.host);
   const method = 'PATCH';
@@ -252,13 +269,13 @@ export function updateMetadata(
 export function deleteObject(
   service: FirebaseStorageImpl,
   location: Location
-): RequestInfo<void> {
+): RequestInfo<string, void> {
   const urlPart = location.fullServerUrl();
   const url = makeUrl(urlPart, service.host);
   const method = 'DELETE';
   const timeout = service.maxOperationRetryTime;
 
-  function handler(_xhr: Connection, _text: string): void {}
+  function handler(_xhr: Connection<string>, _text: string): void {}
   const requestInfo = new RequestInfo(url, method, handler, timeout);
   requestInfo.successCodes = [200, 204];
   requestInfo.errorHandler = objectErrorHandler(location);
@@ -299,7 +316,7 @@ export function multipartUpload(
   mappings: Mappings,
   blob: FbsBlob,
   metadata?: Metadata | null
-): RequestInfo<Metadata> {
+): RequestInfo<string, Metadata> {
   const urlPart = location.bucketOnlyServerUrl();
   const headers: { [prop: string]: string } = {
     'X-Goog-Upload-Protocol': 'multipart'
@@ -373,7 +390,7 @@ export class ResumableUploadStatus {
 }
 
 export function checkResumeHeader_(
-  xhr: Connection,
+  xhr: Connection<string>,
   allowed?: string[]
 ): string {
   let status: string | null = null;
@@ -393,7 +410,7 @@ export function createResumableUpload(
   mappings: Mappings,
   blob: FbsBlob,
   metadata?: Metadata | null
-): RequestInfo<string> {
+): RequestInfo<string, string> {
   const urlPart = location.bucketOnlyServerUrl();
   const metadataForUpload = metadataForUpload_(location, blob, metadata);
   const urlParams: UrlParams = { name: metadataForUpload['fullPath']! };
@@ -409,7 +426,7 @@ export function createResumableUpload(
   const body = toResourceString(metadataForUpload, mappings);
   const timeout = service.maxUploadRetryTime;
 
-  function handler(xhr: Connection): string {
+  function handler(xhr: Connection<string>): string {
     checkResumeHeader_(xhr);
     let url;
     try {
@@ -436,10 +453,10 @@ export function getResumableUploadStatus(
   location: Location,
   url: string,
   blob: FbsBlob
-): RequestInfo<ResumableUploadStatus> {
+): RequestInfo<string, ResumableUploadStatus> {
   const headers = { 'X-Goog-Upload-Command': 'query' };
 
-  function handler(xhr: Connection): ResumableUploadStatus {
+  function handler(xhr: Connection<string>): ResumableUploadStatus {
     const status = checkResumeHeader_(xhr, ['active', 'final']);
     let sizeString: string | null = null;
     try {
@@ -489,7 +506,7 @@ export function continueResumableUpload(
   mappings: Mappings,
   status?: ResumableUploadStatus | null,
   progressCallback?: ((p1: number, p2: number) => void) | null
-): RequestInfo<ResumableUploadStatus> {
+): RequestInfo<string, ResumableUploadStatus> {
   // TODO(andysoto): standardize on internal asserts
   // assert(!(opt_status && opt_status.finalized));
   const status_ = new ResumableUploadStatus(0, 0);
@@ -521,7 +538,10 @@ export function continueResumableUpload(
     throw cannotSliceBlob();
   }
 
-  function handler(xhr: Connection, text: string): ResumableUploadStatus {
+  function handler(
+    xhr: Connection<string>,
+    text: string
+  ): ResumableUploadStatus {
     // TODO(andysoto): Verify the MD5 of each uploaded range:
     // the 'x-range-md5' header comes back with status code 308 responses.
     // We'll only be able to bail out though, because you can't re-upload a

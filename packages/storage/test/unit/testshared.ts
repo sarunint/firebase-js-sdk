@@ -23,8 +23,7 @@ import { FirebaseApp } from '@firebase/app-types';
 import { CONFIG_STORAGE_BUCKET_KEY } from '../../src/implementation/constants';
 import { FirebaseStorageError } from '../../src/implementation/error';
 import { Headers, Connection } from '../../src/implementation/connection';
-import { ConnectionPool } from '../../src/implementation/connectionPool';
-import { SendHook, TestingConnection } from './connection';
+import { newTestConnection, TestingConnection } from './connection';
 import { FirebaseAuthInternalName } from '@firebase/auth-interop-types';
 import {
   Provider,
@@ -35,6 +34,7 @@ import {
 import { AppCheckInternalComponentName } from '@firebase/app-check-interop-types';
 import { FirebaseStorageImpl } from '../../src/service';
 import { Metadata } from '../../src/metadata';
+import { injectTestConnection } from '../../src/platform/connection';
 
 export const authToken = 'totally-legit-auth-token';
 export const appCheckToken = 'totally-shady-token';
@@ -106,20 +106,14 @@ export function makeFakeAppCheckProvider(tokenResult: {
   return provider as Provider<AppCheckInternalComponentName>;
 }
 
-export function makePool(sendHook: SendHook | null): ConnectionPool {
-  const pool: any = {
-    createConnection() {
-      return new TestingConnection(sendHook);
-    }
-  };
-  return pool as ConnectionPool;
-}
-
 /**
  * Returns something that looks like an fbs.XhrIo with the given headers
  * and status.
  */
-export function fakeXhrIo(headers: Headers, status: number = 200): Connection {
+export function fakeXhrIo<I = string>(
+  headers: Headers,
+  status: number = 200
+): Connection<I> {
   const lower: Headers = {};
   for (const [key, value] of Object.entries(headers)) {
     lower[key.toLowerCase()] = value.toString();
@@ -139,7 +133,7 @@ export function fakeXhrIo(headers: Headers, status: number = 200): Connection {
     }
   };
 
-  return fakeConnection as Connection;
+  return fakeConnection as Connection<I>;
 }
 
 /**
@@ -227,11 +221,11 @@ export function storageServiceWithHandler(
     );
   }
 
+  injectTestConnection(() => newTestConnection(newSend));
   return new FirebaseStorageImpl(
     {} as FirebaseApp,
     emptyAuthProvider,
-    fakeAppCheckTokenProvider,
-    makePool(newSend)
+    fakeAppCheckTokenProvider
   );
 }
 

@@ -65,6 +65,9 @@ export interface FullMetadata extends UploadMetadata {
     updated: string;
 }
 
+// @public
+export function getBytes(ref: StorageReference): Promise<ArrayBuffer>;
+
 // @internal (undocumented)
 export function _getChild(ref: StorageReference, childPath: string): _Reference;
 

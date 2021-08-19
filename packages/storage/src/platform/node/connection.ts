@@ -22,16 +22,21 @@ import * as nodeFetch from 'node-fetch';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fetch: typeof window.fetch = nodeFetch as any;
 
+/** An override for the text-based Connection. Used in tests. */
+let textFactoryOverride: (() => Connection<string>) | null = null;
+
 /**
  * Network layer that works in Node.
  *
  * This network implementation should not be used in browsers as it does not
  * support progress updates.
  */
-export class FetchConnection implements Connection {
+abstract class FetchConnection<ResponseType>
+  implements Connection<ResponseType>
+{
   private errorCode_: ErrorCode;
   private statusCode_: number | undefined;
-  private body_: string | undefined;
+  protected body_: ArrayBuffer | undefined;
   private headers_: Headers | undefined;
   private sent_: boolean = false;
 
@@ -58,7 +63,7 @@ export class FetchConnection implements Connection {
       .then(resp => {
         this.headers_ = resp.headers;
         this.statusCode_ = resp.status;
-        return resp.text();
+        return resp.arrayBuffer();
       })
       .then(body => {
         this.body_ = body;
@@ -79,13 +84,16 @@ export class FetchConnection implements Connection {
     return this.statusCode_;
   }
 
+  abstract getResponse(): ResponseType;
+
   getResponseText(): string {
     if (this.body_ === undefined) {
       throw internalError(
         'cannot .getResponseText() before receiving response'
       );
     }
-    return this.body_;
+
+    return new TextDecoder().decode(this.body_);
   }
 
   abort(): void {
@@ -113,6 +121,33 @@ export class FetchConnection implements Connection {
   }
 }
 
-export function newConnection(): Connection {
-  return new FetchConnection();
+export class FetchTextConnection extends FetchConnection<string> {
+  getResponse(): string {
+    return this.getResponseText();
+  }
+}
+
+export function newTextConnection(): Connection<string> {
+  return textFactoryOverride
+    ? textFactoryOverride()
+    : new FetchTextConnection();
+}
+
+export class FetchBytesConnection extends FetchConnection<ArrayBuffer> {
+  getResponse(): ArrayBuffer {
+    if (!this.body_) {
+      throw internalError('cannot .getResponse() before sending');
+    }
+    return this.body_;
+  }
+}
+
+export function newBytesConnection(): Connection<ArrayBuffer> {
+  return new FetchBytesConnection();
+}
+
+export function injectTestConnection(
+  factory: (() => Connection<string>) | null
+): void {
+  textFactoryOverride = factory;
 }

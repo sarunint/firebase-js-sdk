@@ -38,7 +38,7 @@ export enum State {
   DONE = 2
 }
 
-export class TestingConnection implements Connection {
+export class TestingConnection implements Connection<string> {
   private state: State;
   private sendPromise: Promise<void>;
   private resolve!: () => void;
@@ -113,6 +113,10 @@ export class TestingConnection implements Connection {
     return this.status;
   }
 
+  getResponse(): string {
+    return this.responseText;
+  }
+
   getResponseText(): string {
     return this.responseText;
   }
@@ -139,4 +143,10 @@ export class TestingConnection implements Connection {
   removeUploadProgressListener(): void {
     // TODO(andysoto): impl
   }
+}
+
+export function newTestConnection(
+  sendHook?: SendHook | null
+): Connection<string> {
+  return new TestingConnection(sendHook ?? null);
 }

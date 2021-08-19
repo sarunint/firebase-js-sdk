@@ -19,7 +19,6 @@ import { Location } from './implementation/location';
 import { FailRequest } from './implementation/failrequest';
 import { Request, makeRequest } from './implementation/request';
 import { RequestInfo } from './implementation/requestinfo';
-import { ConnectionPool } from './implementation/connectionPool';
 import { Reference, _getChild } from './reference';
 import { Provider } from '@firebase/component';
 import { FirebaseAuthInternalName } from '@firebase/auth-interop-types';
@@ -31,7 +30,7 @@ import {
   DEFAULT_HOST,
   DEFAULT_MAX_OPERATION_RETRY_TIME,
   DEFAULT_MAX_UPLOAD_RETRY_TIME
-} from '../src/implementation/constants';
+} from './implementation/constants';
 import {
   invalidArgument,
   appDeleted,
@@ -39,6 +38,7 @@ import {
 } from './implementation/error';
 import { validateNumber } from './implementation/type';
 import { FirebaseStorage } from '../exp/public-types';
+import { Connection } from './implementation/connection';
 import { createMockUserToken, EmulatorMockTokenOptions } from '@firebase/util';
 
 export function isUrl(path?: string): boolean {
@@ -180,7 +180,6 @@ export class FirebaseStorageImpl implements FirebaseStorage {
     /**
      * @internal
      */
-    readonly _pool: ConnectionPool,
     readonly _url?: string,
     readonly _firebaseVersion?: string
   ) {
@@ -298,18 +297,19 @@ export class FirebaseStorageImpl implements FirebaseStorage {
    * @param requestInfo - HTTP RequestInfo object
    * @param authToken - Firebase auth token
    */
-  _makeRequest<T>(
-    requestInfo: RequestInfo<T>,
+  _makeRequest<I, O>(
+    requestInfo: RequestInfo<I, O>,
+    requestFactory: () => Connection<I>,
     authToken: string | null,
     appCheckToken: string | null
-  ): Request<T> {
+  ): Request<O> {
     if (!this._deleted) {
       const request = makeRequest(
         requestInfo,
+        requestFactory,
         this._appId,
         authToken,
         appCheckToken,
-        this._pool,
         this._firebaseVersion
       );
       this._requests.add(request);
@@ -324,14 +324,20 @@ export class FirebaseStorageImpl implements FirebaseStorage {
     }
   }
 
-  async makeRequestWithTokens<T>(
-    requestInfo: RequestInfo<T>
-  ): Promise<Request<T>> {
+  async makeRequestWithTokens<I, O>(
+    requestInfo: RequestInfo<I, O>,
+    requestFactory: () => Connection<I>
+  ): Promise<Request<O>> {
     const [authToken, appCheckToken] = await Promise.all([
       this._getAuthToken(),
       this._getAppCheckToken()
     ]);
 
-    return this._makeRequest(requestInfo, authToken, appCheckToken);
+    return this._makeRequest(
+      requestInfo,
+      requestFactory,
+      authToken,
+      appCheckToken
+    );
   }
 }
