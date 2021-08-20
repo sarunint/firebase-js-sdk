@@ -190,6 +190,54 @@ export function newBytesConnection(): Connection<ArrayBuffer> {
   return new XhrBytesConnection();
 }
 
+const MAX_ERROR_MSG_LENGTH = 512;
+
+export class XhrBlobConnection extends XhrConnection<Blob> {
+  private data_?: Blob;
+  private text_?: string;
+
+  initXhr(): void {
+    // We use Blob here instead of ArrayBuffer to ensure that this code works
+    // in Opera.
+    this.xhr_.responseType = 'blob';
+  }
+
+  getResponseText(): string {
+    if (!this.sent_) {
+      throw internalError('cannot .getResponseText() before sending');
+    }
+    return this.text_!;
+  }
+
+  getResponse(): Blob {
+    if (!this.sent_) {
+      throw internalError('cannot .getResponse() before sending');
+    }
+    return this.data_!;
+  }
+
+  send(
+    url: string,
+    method: string,
+    body?: ArrayBufferView | Blob | string,
+    headers?: Headers
+  ): Promise<void> {
+    return super
+      .send(url, method, body, headers)
+      .then(() => {
+        this.data_ = this.xhr_.response;
+        return this.data_!.slice(0, MAX_ERROR_MSG_LENGTH, 'string').text();
+      })
+      .then(text => {
+        this.text_ = text;
+      });
+  }
+}
+
+export function newBlobConnection(): Connection<Blob> {
+  return new XhrBlobConnection();
+}
+
 export function injectTestConnection(
   factory: (() => Connection<string>) | null
 ): void {

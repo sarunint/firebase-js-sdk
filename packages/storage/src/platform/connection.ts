@@ -18,6 +18,7 @@ import { Connection } from '../implementation/connection';
 import {
   newTextConnection as nodeNewTextConnection,
   newBytesConnection as nodeNewBytesConnection,
+  newBlobConnection as nodeNewBlobConnection,
   injectTestConnection as nodeInjectTestConnection
 } from './node/connection';
 
@@ -36,4 +37,9 @@ export function newTextConnection(): Connection<string> {
 export function newBytesConnection(): Connection<ArrayBuffer> {
   // This file is only used under ts-node.
   return nodeNewBytesConnection();
+}
+
+export function newBlobConnection(): Connection<Blob> {
+  // This file is only used under ts-node.
+  return nodeNewBlobConnection();
 }

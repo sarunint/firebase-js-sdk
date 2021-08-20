@@ -44,7 +44,7 @@ function getTestFiles(argv) {
     );
     integrationTestFiles = ['test/integration/*compat*'];
   } else {
-    integrationTestFiles = ['test/integration/*'];
+    integrationTestFiles = ['test/integration/*', 'test/browser/*'];
   }
   if (argv.unit) {
     return unitTestFiles;

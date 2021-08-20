@@ -223,6 +223,23 @@ export function getBytesHandler(): RequestHandler<ArrayBuffer, ArrayBuffer> {
   return (xhr: Connection<ArrayBuffer>, data: ArrayBuffer) => data;
 }
 
+export function getBlob(
+  service: FirebaseStorageImpl,
+  location: Location
+): RequestInfo<Blob, Blob> {
+  const urlPart = location.fullServerUrl();
+  const url = makeUrl(urlPart, service.host) + '?alt=media';
+  const method = 'GET';
+  const timeout = service.maxOperationRetryTime;
+  const requestInfo = new RequestInfo(url, method, getBlobHandler(), timeout);
+  requestInfo.errorHandler = objectErrorHandler(location);
+  return requestInfo;
+}
+
+export function getBlobHandler(): RequestHandler<Blob, Blob> {
+  return (xhr: Connection<Blob>, data: Blob) => data;
+}
+
 export function getDownloadUrl(
   service: FirebaseStorageImpl,
   location: Location,

@@ -33,7 +33,8 @@ import {
   ResumableUploadStatus,
   continueResumableUpload,
   RESUMABLE_UPLOAD_CHUNK_SIZE,
-  getBytes
+  getBytes,
+  getBlob
 } from '../../src/implementation/requests';
 import { makeUrl } from '../../src/implementation/url';
 import { unknown, StorageErrorCode } from '../../src/implementation/error';
@@ -345,6 +346,15 @@ describe('Firebase Storage > Requests', () => {
       fakeXhrIo({}),
       new Uint8Array([1, 128, 255])
     );
+    assert.deepEqual(new Uint8Array(bytes), new Uint8Array([1, 128, 255]));
+  });
+  (typeof Blob !== undefined ? it : it.skip)('getBlob handler',async () => {
+    const requestInfo = getBlob(storageService, locationNormal);
+    const blob = requestInfo.handler(
+      fakeXhrIo({}),
+      new Blob([new Uint8Array([1, 128, 255])])
+    );
+    const bytes = await blob.arrayBuffer();
     assert.deepEqual(new Uint8Array(bytes), new Uint8Array([1, 128, 255]));
   });
   it('updateMetadata requestinfo', () => {

@@ -47,19 +47,28 @@ export const STORAGE_BUCKET = PROJECT_CONFIG.storageBucket;
 export const API_KEY = PROJECT_CONFIG.apiKey;
 export const AUTH_DOMAIN = PROJECT_CONFIG.authDomain;
 
+export async function createApp(): Promise<FirebaseApp> {
+  const app = initializeApp({
+    apiKey: API_KEY,
+    projectId: PROJECT_ID,
+    storageBucket: STORAGE_BUCKET,
+    authDomain: AUTH_DOMAIN
+  });
+  await signInAnonymously(getAuth(app));
+  return app;
+}
+
+export function createStorage(app: FirebaseApp): types.FirebaseStorage {
+  return getStorage(app);
+}
+
 describe('FirebaseStorage Exp', () => {
   let app: FirebaseApp;
   let storage: types.FirebaseStorage;
 
   beforeEach(async () => {
-    app = initializeApp({
-      apiKey: API_KEY,
-      projectId: PROJECT_ID,
-      storageBucket: STORAGE_BUCKET,
-      authDomain: AUTH_DOMAIN
-    });
-    await signInAnonymously(getAuth(app));
-    storage = getStorage(app);
+    app = await createApp();
+    storage = createStorage(app);
   });
 
   afterEach(async () => {

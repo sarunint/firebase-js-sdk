@@ -76,7 +76,7 @@ const es2017Plugins = [
 const es2017Builds = [
   // Node
   {
-    input: './exp/index.ts',
+    input: './exp/index.node.ts',
     output: {
       file: path.resolve('./exp', pkgExp.main),
       format: 'cjs',

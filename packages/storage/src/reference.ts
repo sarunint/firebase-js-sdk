@@ -30,7 +30,8 @@ import {
   getDownloadUrl as requestsGetDownloadUrl,
   deleteObject as requestsDeleteObject,
   multipartUpload,
-  getBytes
+  getBytes,
+  getBlob
 } from './implementation/requests';
 import { ListOptions } from '../exp/public-types';
 import { StringFormat, dataFromString } from './implementation/string';
@@ -41,7 +42,11 @@ import { UploadTask } from './task';
 import { invalidRootOperation, noDownloadURL } from './implementation/error';
 import { validateNumber } from './implementation/type';
 import { UploadResult } from './tasksnapshot';
-import { newBytesConnection, newTextConnection } from './platform/connection';
+import {
+  newBytesConnection,
+  newTextConnection,
+  newBlobConnection
+} from './platform/connection';
 
 /**
  * Provides methods to interact with a bucket in the Firebase Storage service.
@@ -154,6 +159,18 @@ export function getBytesInternal(ref: Reference): Promise<ArrayBuffer> {
   const requestInfo = getBytes(ref.storage, ref._location);
   return ref.storage
     .makeRequestWithTokens(requestInfo, newBytesConnection)
+    .then(request => request.getPromise());
+}
+
+/**
+ * Download the bytes at the object's location.
+ * @returns A Promise containing the downloaded bytes.
+ */
+export function getBlobInternal(ref: Reference): Promise<Blob> {
+  ref._throwIfRoot('getBytes');
+  const requestInfo = getBlob(ref.storage, ref._location);
+  return ref.storage
+    .makeRequestWithTokens(requestInfo, newBlobConnection)
     .then(request => request.getPromise());
 }
 

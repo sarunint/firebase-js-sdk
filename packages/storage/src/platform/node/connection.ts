@@ -151,3 +151,7 @@ export function injectTestConnection(
 ): void {
   textFactoryOverride = factory;
 }
+
+export function newBlobConnection(): Connection<Blob> {
+  throw new Error('Blobs are not supported on Node');
+}
