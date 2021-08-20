@@ -66,6 +66,9 @@ export interface FullMetadata extends UploadMetadata {
 }
 
 // @public
+export function getBlob(ref: StorageReference): Promise<Blob>;
+
+// @public
 export function getBytes(ref: StorageReference): Promise<ArrayBuffer>;
 
 // @internal (undocumented)
