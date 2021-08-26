@@ -28,12 +28,11 @@ jobs:
       env:
         PROJECT_CONFIG: ${{ secrets.TEST_PROJECT_CONFIG }}
         TEST_ACCOUNT: ${{ secrets.TEST_ACCOUNT }}
-        RECAPTCHA_SITE_KEY: ${{ secrets.APP_CHECK_DEBUG_TOKEN }}
       run: |
         echo "export const config = $PROJECT_CONFIG; export const testAccount = $TEST_ACCOUNT" > firebase-config.js
     - name: Yarn install
       run: |
-        yarn add firebase@beta
+        yarn add firebase@next
         yarn
     - name: Run tests
       run: xvfb-run yarn test
