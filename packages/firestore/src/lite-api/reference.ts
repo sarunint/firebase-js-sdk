@@ -323,11 +323,11 @@ export class CollectionReference<T = DocumentData> extends Query<T> {
  * to a collection.
  * @returns The `CollectionReference` instance.
  */
-export function collection(
+export function collection<T = DocumentData>(
   firestore: Firestore,
   path: string,
   ...pathSegments: string[]
-): CollectionReference<DocumentData>;
+): CollectionReference<T>;
 /**
  * Gets a `CollectionReference` instance that refers to a subcollection of
  * `reference` at the the specified relative path.
@@ -362,11 +362,11 @@ export function collection(
   path: string,
   ...pathSegments: string[]
 ): CollectionReference<DocumentData>;
-export function collection(
+export function collection<T = DocumentData>(
   parent: Firestore | DocumentReference<unknown> | CollectionReference<unknown>,
   path: string,
   ...pathSegments: string[]
-): CollectionReference<DocumentData> {
+): CollectionReference<T> {
   parent = getModularInstance(parent);
 
   validateNonEmptyArgument('collection', 'path', path);
@@ -446,11 +446,11 @@ export function collectionGroup(
  * a document.
  * @returns The `DocumentReference` instance.
  */
-export function doc(
+export function doc<T = DocumentData>(
   firestore: Firestore,
   path: string,
   ...pathSegments: string[]
-): DocumentReference<DocumentData>;
+): DocumentReference<T>;
 /**
  * Gets a `DocumentReference` instance that refers to a document within
  * `reference` at the specified relative path. If no path is specified, an
@@ -483,11 +483,11 @@ export function doc<T>(
  * a document.
  * @returns The `DocumentReference` instance.
  */
-export function doc(
+export function doc<T = DocumentData>(
   reference: DocumentReference<unknown>,
   path: string,
   ...pathSegments: string[]
-): DocumentReference<DocumentData>;
+): DocumentReference<T>;
 export function doc<T>(
   parent: Firestore | CollectionReference<T> | DocumentReference<unknown>,
   path?: string,
